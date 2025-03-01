@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Models\PedidoModel;
 use App\Models\ProdutoModel;
 use App\Models\PedidoProdutoModel;
+use App\Models\ClienteModel;
 
 class Pedidos extends BaseController
 {
@@ -26,7 +27,7 @@ class Pedidos extends BaseController
         try {
             $request = service('request');
             $dados = $request->getJSON(true); 
-
+    
             $situacao = strtoupper(trim($dados['situacao'] ?? ''));
             if (!in_array($situacao, ['EM ABERTO', 'PAGO', 'CANCELADO'])) {
                 return $this->response->setJSON([
@@ -37,7 +38,7 @@ class Pedidos extends BaseController
                     'retorno' => []
                 ]);
             }
-
+    
             if (!isset($dados['cliente_id'])) {
                 return $this->response->setJSON([
                     'cabecalho' => [
@@ -47,7 +48,20 @@ class Pedidos extends BaseController
                     'retorno' => []
                 ]);
             }
-
+    
+            // Verificar se o cliente existe no banco
+            $clienteModel = new ClienteModel();
+            $cliente = $clienteModel->find($dados['cliente_id']);
+            if (!$cliente) {
+                return $this->response->setJSON([
+                    'cabecalho' => [
+                        'status' => 400,
+                        'mensagem' => 'Cliente não encontrado.'
+                    ],
+                    'retorno' => []
+                ]);
+            }
+    
             if (!isset($dados['produtos']) || !is_array($dados['produtos']) || count($dados['produtos']) === 0) {
                 return $this->response->setJSON([
                     'cabecalho' => [
@@ -57,7 +71,7 @@ class Pedidos extends BaseController
                     'retorno' => []
                 ]);
             }
-
+    
             if (!isset($dados['quantidade']) || !is_array($dados['quantidade']) || count($dados['quantidade']) === 0) {
                 return $this->response->setJSON([
                     'cabecalho' => [
@@ -67,7 +81,7 @@ class Pedidos extends BaseController
                     'retorno' => []
                 ]);
             }
-
+    
             foreach ($dados['produtos'] as $produtoId) {
                 if (!isset($dados['quantidade'][$produtoId]) || $dados['quantidade'][$produtoId] <= 0) {
                     return $this->response->setJSON([
@@ -79,13 +93,13 @@ class Pedidos extends BaseController
                     ]);
                 }
             }
-
+    
             $pedidoModel = new PedidoModel();
             $pedidoId = $pedidoModel->insert([
                 'situacao' => $situacao,
                 'cliente_id' => $dados['cliente_id']
             ]);
-
+    
             if (!$pedidoId) {
                 return $this->response->setJSON([
                     'cabecalho' => [
@@ -95,19 +109,19 @@ class Pedidos extends BaseController
                     'retorno' => []
                 ]);
             }
-
+    
             $produtoModel = new ProdutoModel();
             $produtosDetalhados = $produtoModel->whereIn('id', $dados['produtos'])->findAll();
-
+    
             $pedidoProdutoModel = new PedidoProdutoModel();
             $valorTotal = 0;
-
+    
             foreach ($produtosDetalhados as $produto) {
                 $quantidade = $dados['quantidade'][$produto['id']];
-
+    
                 $valorProduto = $produto['preco'] * $quantidade;
                 $valorTotal += $valorProduto;
-
+    
                 $pedidoProdutoModel->insert([
                     'pedido_id' => $pedidoId,
                     'produto_id' => $produto['id'],
@@ -115,9 +129,9 @@ class Pedidos extends BaseController
                     'preco' => $produto['preco']
                 ]);
             }
-
+    
             $pedidoModel->update($pedidoId, ['valor' => $valorTotal]);
-
+    
             return $this->response->setJSON([
                 'cabecalho' => [
                     'status' => 200,
@@ -139,6 +153,7 @@ class Pedidos extends BaseController
             ]);
         }
     }
+    
 
     public function pesquisar()
     {
@@ -207,6 +222,18 @@ class Pedidos extends BaseController
     public function deletar($id)
     {
         $pedidoModel = new PedidoModel();
+
+        $pedido = $pedidoModel->find($id);
+        if (!$pedido) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 404,
+                    'mensagem' => 'Pedido não encontrado.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
         $deleted = $pedidoModel->delete($id);
 
         if ($deleted) {

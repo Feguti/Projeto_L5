@@ -18,7 +18,37 @@ class Produtos extends BaseController
     public function salvar()
     { 
         $request = service('request');
-        
+        $nome = trim($request->getVar('nome'));
+        $descricao = trim($request->getVar('descricao'));
+        $preco = $request->getVar('preco');
+
+        // Valida se nome e preço foram informados
+        if (empty($nome) || empty($preco)) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O nome e o preço do produto são obrigatórios.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
+        // Verifica se o preço é um número válido e maior que zero
+        if (!is_numeric($preco) || floatval($preco) <= 0) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O preço deve ser um número válido e maior que zero.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
+        $data = [
+            'nome' => $nome,
+            'descricao' => $descricao,
+            'preco' => floatval($preco)
+        ];
         $data = [
             'nome' => $request->getVar('nome'),
             'descricao' => $request->getVar('descricao'),
@@ -139,6 +169,43 @@ class Produtos extends BaseController
 
         $request = service('request');
         $data = $request->getJSON(true); 
+
+        
+        $nome = isset($data['nome']) ? trim($data['nome']) : '';
+        $preco = isset($data['preco']) ? $data['preco'] : '';
+
+       
+        if (empty($nome) || empty($preco)) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O nome e o preço do produto são obrigatórios.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
+        
+        if (!is_numeric($preco) || floatval($preco) <= 0) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O preço deve ser um número válido e maior que zero.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
+        
+        $updateData = [
+            'nome' => $nome,
+            'preco' => floatval($preco),
+        ];
+
+        
+        if (isset($data['descricao'])) {
+            $updateData['descricao'] = trim($data['descricao']);
+        }
 
         $produtoModel->update($id, $data);
 

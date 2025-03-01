@@ -21,11 +21,13 @@ class Clientes extends BaseController
         
         $data = $request->getJSON(true); 
         
-        if (!isset($data['parametros']['nome_razao_social']) || !isset($data['parametros']['cpf_cnpj'])) {
+        if (!isset($data['parametros']['nome_razao_social']) || empty(trim($data['parametros']['nome_razao_social'])) ||
+            !isset($data['parametros']['cpf_cnpj']) || empty(trim($data['parametros']['cpf_cnpj']))
+        ) {
             return $this->response->setJSON([
                 'cabecalho' => [
                     'status' => 400,
-                    'mensagem' => 'Parâmetros inválidos'
+                    'mensagem' => 'Nome/Razão Social e CPF/CNPJ são obrigatórios e não podem estar em branco.'
                 ],
                 'retorno' => []
             ]);
@@ -63,11 +65,11 @@ class Clientes extends BaseController
         
         $data = $request->getJSON(true); 
         
-        if (!isset($data['parametros']['termo'])) {
+        if (!isset($data['parametros']['termo']) || empty(trim($data['parametros']['termo']))) {
             return $this->response->setJSON([
                 'cabecalho' => [
                     'status' => 400,
-                    'mensagem' => 'Parâmetro de pesquisa "termo" não encontrado'
+                    'mensagem' => 'Parâmetro de pesquisa "termo" não pode ficar vazio'
                 ],
                 'retorno' => []
             ]);
@@ -126,10 +128,22 @@ class Clientes extends BaseController
         ]);
     }
 
-    public function deletar($id)
+    public function deletar($id = null)
     {
+
+        if (empty($id)) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O ID do cliente é obrigatório para exclusão.'
+                ],
+                'retorno' => []
+            ]);
+        }
+
         $clienteModel = new ClienteModel();
         $cliente = $clienteModel->find($id);
+
         if (!$cliente) {
             return $this->response->setJSON([
                 'cabecalho' => [
@@ -169,6 +183,16 @@ class Clientes extends BaseController
         $request = service('request');
         $data = $request->getJSON(true); 
 
+        if (empty($data['nome_razao_social']) || empty($data['cpf_cnpj'])) {
+            return $this->response->setJSON([
+                'cabecalho' => [
+                    'status' => 400,
+                    'mensagem' => 'O nome e o CPF/CNPJ são obrigatórios e não podem estar vazios.'
+                ],
+                'retorno' => []
+            ]);
+        }
+        
         $clienteModel->update($id, $data);
 
         return $this->response->setJSON([
